@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>orc</title>
+</head>
+<body>
+<script>
+var ws = new WebSocket('wss://192.168.10.65:4433/chat')
+ws.onmessage = function(message) {
+	console.log(message.data)
+}
+ws.onerror = function(err) {
+	console.error(err)
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+{application, orc, [
+	{description, "Open Robotics Company WebSocket Server"},
+	{vsn, "1"},
+	{registered, []},
+	{applications, [
+		kernel,
+		stdlib,
+		crypto,
+		asn1,
+		public_key,
+		ssl
+	]},
+	{ modules, [ 
+		orc,
+		orc_app,
+		orc_sup,
+		orc_router,
+		orc_routes,
+		orc_logger,
+		orc_server
+	]},
+	{mod, { orc_app, []}},
+	{env, [
+		{ tables, [ orc_routes, orc_auth ]},
+		{ table_timeout, 20000 },
+		{ salt, <<"thisisareallyterriblesaltdon'tuse">> },
+		{ cacertfile, "cacert.pem" },
+		{ certfile, "cert.pem" },
+		{ keyfile, "key.pem" }
+	]}
+]}.
