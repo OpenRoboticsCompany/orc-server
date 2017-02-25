@@ -45,6 +45,7 @@ init(Request = #request{ socket = Socket, path = Path, headers = Headers, body =
 %%	{ PeerIP, PeerPort } = inet:peername(Socket),
 %%	error_logger:info_msg("Websocket started on ~p, from ~p:~p", [ Path, PeerIP, PeerPort ]),
 	ok = ssl:controlling_process(Socket,self()),
+	error_logger:info_msg("Adding route ~p for ~p~n", [ Path, self() ]),
 	orc_router:connect(self(),Path),
 	{ ok, #websocket{ 
 		pid = self(),
@@ -70,7 +71,12 @@ handle_cast({ message, Data }, WebSocket = #websocket{ path = Path, protocol = P
 	end,
 	{ noreply, WebSocket#websocket{ data = [] }};
 
-handle_cast({ send, Data }, WebSocket = #websocket { socket = Socket }) ->
+handle_cast({ send, Message }, WebSocket = #websocket { socket = Socket, protocol = Protocol }) ->
+	Data = case Protocol of
+		<<"ujson">> -> ujson:encode(Message);
+		<<"json">> -> json:encode(Message);
+		_ -> Message
+	end,
 	ok = ssl:send(Socket,frame(Data)),
 	{ noreply, WebSocket };
 
@@ -109,7 +115,7 @@ terminate( normal, #websocket{ socket = Socket }) ->
 	ok;
 
 terminate( _Reason, #websocket{ socket = Socket, path = Path }) ->
-	orc_router:close(self(), Path),
+	orc_router:close(self()),
 	ssl:close(Socket),
 	ok.
 
@@ -147,8 +153,9 @@ handshake(Headers) ->
 		headers = [
 			{ <<"Upgrade">>, <<"websocket">> },
 			{ <<"Connection">>, <<"Upgrade">> },
-			{ <<"Sec-WebSocket-Accept">>, Secret },
-			{ <<"Sec-WebSocket-Protocol">>, Proto }]
+			{ <<"Sec-WebSocket-Accept">>, Secret } % ,
+%			{ <<"Sec-WebSocket-Protocol">>, Proto }
+		]
 	}.
 
 %% Frame a Datagram with the appropriate Opcode, Length, and Mask

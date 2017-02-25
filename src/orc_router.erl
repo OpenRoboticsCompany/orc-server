@@ -24,14 +24,19 @@ stop() ->
 	gen_server:call(?MODULE,stop).
 
 connect(Pid,Path) ->
+	error_logger:info_msg("Connect Adding ~p for ~p~n", [ Path, Pid]),
 	gen_server:cast(?MODULE,{ connect, Path, Pid }).
 
 close(Pid) ->
 	gen_server:cast(?MODULE, { close, Pid }).
 
 
+route(<<>>) ->
+	error_logger:info_msg("Attempt to route empty message~n"),
+	ok;
 route(Data) ->
-	gen_server:call(?MODULE, { route, Data }).
+	error_logger:info_msg("Routing ~p~n", Data ),
+	gen_server:cast(?MODULE, { route, Data }).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Private API
@@ -48,14 +53,17 @@ handle_call(Message,_From,State) ->
 	{ reply, #response{ status = 405 }, State }.
 
 handle_cast({ connect, Path, Pid }, State) ->
+	error_logger:info_msg("Adding ~p for ~p~n", [ Path, Pid ]),
 	Paths = orc_routes:add(Pid,Path),
 	{ noreply, State#orc_router{ paths = Paths } };	
 
 handle_cast({ route, Data }, State = #orc_router{ paths = Paths }) ->
+	error_logger:info_msg("Paths are ~p~n", [ Paths ]),
 	[ orc_websocket:send(Pid, Data) || Pid <- orc_path:scan(Data,Paths) ], 	
 	{ noreply, State };
 
 handle_cast({ close, Pid }, State ) ->
+	error_logger:info_msg("Adding ~p ~n", [ Pid ]),
 	Paths = orc_routes:remove(Pid),
 	{ noreply, State#orc_router{ paths = Paths }};
 

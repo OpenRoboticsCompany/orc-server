@@ -2,27 +2,26 @@
 -author({ "David J Goehrig", "dave@dloh.org" }).
 -copyright(<<"© 2016 David J Goehrig"/utf8>>).
 -behavior(gen_server).
--export([ start/0, start_link/2, stop/0, server/2 ]).
+-export([ start/0, start_link/1, stop/0, server/1 ]).
 -export([ init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3 ]).
 
 -include("include/orc_http.hrl").
--record(orc, { socket, module, request = #request{} }).
+-record(orc, { socket, request = #request{} }).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Public API
 %
 
 %% create a orc_server under supervision for the port
-server(Module,Port) ->
-	orc_sup:server(Module,Port).
+server(Port) ->
+	orc_sup:server(Port).
 
 start() ->
 	application:ensure_all_started(orc).
 
-start_link(Socket,Module) ->
+start_link(Socket) ->
 	gen_server:start_link(?MODULE, #orc{ 
 		socket = Socket,
-		module = Module,
 		request = #request{}
 	},[]).
 
@@ -68,11 +67,11 @@ handle_cast(Message,Orc) ->
 	error_loggger:error_msg("Unknown message: ~p", [ Message ]),
 	{ noreply, Orc }.
 
-handle_info({ ssl, Socket, Data }, Orc = #orc{ request = Req, module = Module }) ->
+handle_info({ ssl, Socket, Data }, Orc = #orc{ request = Req }) ->
 	Request = orc_http:request(Req,Data),
 	case Request#request.stage of
 		done ->
-			Response = erlang:apply(Module,Request#request.method,[ Request ]),
+			Response = orc_websocket:get(Request),
 			Bin = orc_http:response(Response),
 			ssl:send(Socket,Bin),
 			{ noreply, Orc#orc{ request = #request{ socket = Socket } }};

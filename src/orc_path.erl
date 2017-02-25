@@ -4,6 +4,8 @@
 
 -export([ match/2, scan/2, components/1 ]).
 
+-record(orc_routes, { pid, path, time, active = true }).
+
 segments([K,V]) ->
 	{ K, V };
 segments([K]) ->
@@ -24,12 +26,12 @@ compare(_Data,[]) -> true;
 compare(_Data,[{}]) -> true;
 compare(_Data,[ { "*", "*"} | _Tail ]) -> true;
 compare(Data, [ { K, "*" } | Tail ]) ->
-	case lists:member(K,proplists:get_keys(Data)) of
+	case lists:member(binary:list_to_bin(K),proplists:get_keys(Data)) of
 		true ->	compare(Data, Tail );
 		_ -> false
 	end;
 compare(Data, [ { K, V } | Tail]) ->
-	case lists:member({K,V},Data) of
+	case lists:member({binary:list_to_bin(K),binary:list_to_bin(V)},Data) of
 		true -> compare(Data,Tail);
 		_ -> false
 	end.
@@ -37,8 +39,11 @@ compare(Data, [ { K, V } | Tail]) ->
 %% searches a proplist for a path match
 %% { Pattern, Pid }
 scan(Data, Paths) ->
-	[ V || { _K, V } <- lists:filter( fun({K,_V}) ->
-		match(Data,K) end, 
+	[ V || #orc_routes{ pid = V } <- lists:filter( fun(#orc_routes{path = K}) ->
+		M = match(Data,K),
+		error_logger:info_msg("Path: ~p Matches: ~p Data: ~p~n", [ K, M, Data ]),
+		M
+	 end, 
 	Paths) ].
 
 -ifdef(TEST).
