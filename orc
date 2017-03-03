@@ -10,7 +10,9 @@
 connect(Server) ->
 	net_kernel:start([ list_to_atom("cmd" ++ integer_to_list(erlang:system_time()) ++ "@localhost"), shortnames ]),
 	case net_kernel:connect(Server) of
-		false -> fail;
+		false -> 
+			io:format("Failed to connect to ~p~n", [ Server ]),
+			erlang:halt(0);
 		true -> ok
 	end.
 
