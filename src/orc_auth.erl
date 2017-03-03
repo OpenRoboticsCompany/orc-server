@@ -35,7 +35,7 @@ auth(Request = #request{ path = Path, headers = Headers }) ->
 				case mnesia:read(orc_auth,Token) of
 					[ #orc_auth{ user = User, email = Email, active = true, paths = Paths } ] ->
 						case lists:foldl(fun(Pattern,Match) -> 
-							orc_path:match(Path,Pattern) or Match end, false, Paths) of
+							orc_path:eval(Path,Pattern) or Match end, false, Paths) of
 							true ->
 								error_logger:info_msg("Allow ~p <~p> for ~p", [ User, Email, Path ]),
 								Request#request{ headers = [ { <<"User">>, User},{<<"Email">>,Email } | Headers ] };

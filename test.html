@@ -5,7 +5,7 @@
 </head>
 <body>
 <script>
-var ws = new WebSocket('wss://192.168.10.65:4433/chat')
+var ws = new WebSocket('wss://dave:test@dloh.org:4433/chat','json')
 ws.onmessage = function(message) {
 	console.log(message.data)
 }

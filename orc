@@ -4,14 +4,6 @@
 %%
 %% Copyright 2017 David J. Goehrig <dave@dloh.org>
 
--record(response, {
-	socket, module, function, args, upgrade = false,
-	status = 200,
-	protocol = <<"HTTP/1.1">>,
-	headers = [],
-	body = <<>>
-}).
-
 %% starts a local node to issue commands from
 %% we name these sequentially with system time
 %% to avoid colliding with other command processes
@@ -208,6 +200,7 @@ orc user [list|add|remove|grant|revoke]
 
 	list				returns a list of all the usernames in the system
 	add User Email Password		creates a new user with email and password
+	auth Path User Password		test a user's auth credentials for a path
 	remove User Email		removes the user with matching name and password
 	grant User Path			grants a access to a path for a given user
 	revoke User Path		removes access to a path for a given user

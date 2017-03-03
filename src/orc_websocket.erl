@@ -29,12 +29,12 @@ stop(WebSocket) ->
 get(Request = #request{ path = Path }) ->
 	io:format("websocket got ~p~n", [ Request ]),
 	case orc_auth:auth(Request) of 
-		true ->
+		Request2 = #request{} ->
 			error_logger:info_msg("Authorized ~p~n", [ Path ]),
-			check_version(Request);
-		false ->
+			check_version(Request2);
+		Response = #response{} ->
 			error_logger:error_msg("Authentication failure ~p~n", [ Request ]),
-			#response{ status = 401 }
+			Response
 	end;		
 
 get(Response = #response{}) ->

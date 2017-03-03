@@ -2,9 +2,10 @@
 -author({ "David J Goehrig", "dave@dloh.org" }).
 -copyright(<<"© 2016,2017 David J Goehrig, Open Robotics Company LLC."/utf8>>).
 
--export([ match/2, scan/2, components/1 ]).
+-export([ match/2, scan/2, components/1, eval/2, validate/2  ]).
 
 -record(orc_routes, { pid, path, time, active = true }).
+
 
 segments([K,V]) ->
 	{ K, V };
@@ -46,6 +47,31 @@ scan(Data, Paths) ->
 	 end, 
 	Paths) ].
 
+%% compares a path vs a path pattern
+eval(Path,Pattern) ->
+	error_logger:info_msg("~p vs ~p~n", [Path, Pattern]),
+	PathSegments = components(Path),
+	PatternSegments = components(Pattern),
+	validate(PathSegments,PatternSegments).
+
+validate([],[]) ->
+	error_logger:info_msg("validate true~n"),
+	true;
+validate([{KA,VA}|TA],[{KB,VB}|TB]) ->
+	error_logger:info_msg("A ~p vs B ~p~n", [ KA, KB ]),
+	case (KB =:= "*") 
+		or ((KA =:= KB) 
+			and ((VA =:= VB) 
+			or (VB =:= "*"))) of
+		true -> validate(TA,TB);
+		false -> false
+	end;
+validate([],[{"*","*"}|_TB]) ->
+	true;
+validate(_,_) ->
+	error_logger:info_msg("validate false~n"),
+	false.
+	
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 match_test() ->
