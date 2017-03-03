@@ -24,17 +24,18 @@ send(WebSocket,Data) ->
 stop(WebSocket) ->
 	gen_server:cast(WebSocket,stop).
 
+
 %% returns true if the request is a websocket request
-get(Request = #request{ headers = Headers }) ->
+get(Request = #request{ path = Path }) ->
 	io:format("websocket got ~p~n", [ Request ]),
-	case proplists:get_value(<<"Sec-WebSocket-Version">>,Headers) of
-		<<"13">> -> 
-			orc_websocket_sup:client(Request),
-			handshake(Headers);
-		Any ->
-			error_logger:error_msg("Websocket protocol not supported: ~p", [ Any ]),
-			#response{ status = 400 }
-	end;
+	case orc_auth:auth(Request) of 
+		true ->
+			error_logger:info_msg("Authorized ~p~n", [ Path ]),
+			check_version(Request);
+		false ->
+			error_logger:error_msg("Authentication failure ~p~n", [ Request ]),
+			#response{ status = 401 }
+	end;		
 
 get(Response = #response{}) ->
 	Response.
@@ -114,7 +115,7 @@ terminate( normal, #websocket{ socket = Socket }) ->
 	ssl:close(Socket),
 	ok;
 
-terminate( _Reason, #websocket{ socket = Socket, path = Path }) ->
+terminate( _Reason, #websocket{ socket = Socket }) ->
 	orc_router:close(self()),
 	ssl:close(Socket),
 	ok.
@@ -153,8 +154,8 @@ handshake(Headers) ->
 		headers = [
 			{ <<"Upgrade">>, <<"websocket">> },
 			{ <<"Connection">>, <<"Upgrade">> },
-			{ <<"Sec-WebSocket-Accept">>, Secret } % ,
-%			{ <<"Sec-WebSocket-Protocol">>, Proto }
+			{ <<"Sec-WebSocket-Accept">>, Secret },
+			{ <<"Sec-WebSocket-Protocol">>, Proto }
 		]
 	}.
 
@@ -292,4 +293,15 @@ dispatch(Opcode, Data ) ->
 		9 -> gen_server:cast(self(),ping);			%% ping
 		10 -> gen_server:cast(self(),pong);			%% pong
 		Any -> gen_server:cast(self(),{ unknown, Any })		%% unknown
+	end.
+
+%% checks the websocket version, if 13 we return the handskake
+check_version(Request = #request{ headers = Headers }) ->
+	case proplists:get_value(<<"Sec-WebSocket-Version">>,Headers) of
+		<<"13">> -> 
+			orc_websocket_sup:client(Request),
+			handshake(Headers);
+		Any ->
+			error_logger:error_msg("Websocket protocol not supported: ~p", [ Any ]),
+			#response{ status = 400 }
 	end.

@@ -6,7 +6,7 @@
 -export([ init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3 ]).
 
 -include("include/orc_http.hrl").
--record(orc, { socket, request = #request{} }).
+-record(orc, { socket, request = #request{}, redirect = false }).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Public API
@@ -41,6 +41,12 @@ init(Orc = #orc{ socket = Listen }) ->
 						socket = Socket,
 						request = #request{ socket = Socket }
 					}};
+				{ error, timeout } ->
+					{ ok, Orc#orc{
+						socket = Socket,
+						request = #request{ socket = Socket },
+						redirect = true
+					}};
 				{ error, Reason } ->
 					error_logger:error_msg("SSL connection failed: ~p", [ Reason ]),
 					{ stop, Reason }
@@ -67,7 +73,19 @@ handle_cast(Message,Orc) ->
 	error_loggger:error_msg("Unknown message: ~p", [ Message ]),
 	{ noreply, Orc }.
 
-handle_info({ ssl, Socket, Data }, Orc = #orc{ request = Req }) ->
+handle_info({ tcp, Socket, Data }, Orc = #orc{ request = Req, redirect = true }) ->
+	Request = orc_http:request(Req,Data),
+	case Request#request.stage of
+		done ->
+			Response = redirect(Request),
+			Bin = orc_http:response(Response),
+			gen_tcp:send(Socket,Bin),
+			{ noreply, Orc#orc{ request = #request{ socket = Socket } }};
+		_ ->
+			{ noreply, Orc#orc{ request = Request }}
+	end;
+
+handle_info({ ssl, Socket, Data }, Orc = #orc{ request = Req, redirect = false }) ->
 	Request = orc_http:request(Req,Data),
 	case Request#request.stage of
 		done ->
@@ -93,4 +111,19 @@ terminate(_Reason,#orc{ socket = Socket }) ->
 
 code_change( _Old, Orc, _Extra) ->
 	{ ok, Orc }.
+
+%% redirects to wss
+redirect(#request{ socket =Socket, path = Path, headers = Headers }) ->
+	Host = proplists:get_value(<<"Host">>, Headers ),
+	error_logger:info_msg("Path ~p~nHost ~p~n", [ Path, Host ]),
+	Location =  <<"wss://", Host/binary, Path/binary>>,
+	#response{
+		socket = Socket,
+		status = 302,
+		headers = [
+			{ <<"Location">>, Location }
+		],
+		body = <<"302 Found ", Location/binary>>
+	}.
+	
 

@@ -1,7 +1,7 @@
 -compile({no_auto_import,[get/1]}).
 
 -record(request, {
-	socket, module, function, args,
+	socket, 
 	stage = request_line, 
 	data = <<>>,
 	method, path, protocol,
@@ -10,7 +10,8 @@
 }).
 
 -record(response, {
-	socket, module, function, args, upgrade = false,
+	socket, 
+	upgrade = false,
 	status = 200,
 	protocol = <<"HTTP/1.1">>,
 	headers = [],
