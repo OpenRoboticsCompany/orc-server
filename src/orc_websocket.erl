@@ -3,7 +3,7 @@
 -copyright(<<"© 2012,2013 David J. Goehrig"/utf8>>).
 -behavior(gen_server).
 
--export([ get/1, start_link/1, send/2, stop/1 ]).
+-export([ get/1, start_link/1, send/2, stop/1, connect/5, message/2 ]).
 -export([ init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3 ]).
 
 -include("../include/orc_http.hrl").
@@ -39,6 +39,28 @@ get(Request = #request{ path = Path }) ->
 
 get(Response = #response{}) ->
 	Response.
+
+connect(Host,Port,Path,User,Password) ->
+	{ ok, Socket } = ssl:connect(Host,Port,[],infinity),
+	HostBin = binary:list_to_bin(Host),
+	PortBin = binary:list_to_bin(integer_to_list(Port)),
+	PathBin = binary:list_to_bin(Path),
+	UserBin = binary:list_to_bin(User),
+	PassBin = binary:list_to_bin(Password),
+	Token = base64:encode(<< UserBin/binary, ":", PassBin/binary >>),
+	ok = ssl:send(Socket,<<"GET ", PathBin/binary, " HTTP/1.1\r\n",
+	"Host: ", HostBin/binary,":",PortBin/binary,"\r\n",
+	"Upgrade: websocket\r\n",
+	"Sec-WebSocket-Protocol: json\r\n",
+	"Sec-WebSocket-Version: 13\r\n",
+	"Sec-WebSocket-Key: 123\r\n",
+	"Authorization: Basic ", Token/binary, "\rr\n",
+	"\r\n">>),
+	Socket.
+
+message(Socket,Data) ->
+	Bin = frame(json:encode(Data),1,true),
+	ssl:send(Socket,Bin).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% gen_server methods
