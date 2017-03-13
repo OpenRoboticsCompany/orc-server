@@ -4,7 +4,7 @@
 
 -record(orc_routes, { pid, path, time, active = true }).
 
--export([load/0, add/2, delete/1, install/1 ]).
+-export([load/0, add/2, remove/1, install/1 ]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Public API
@@ -27,7 +27,7 @@ add(Pid, Path) ->
 	end),
 	load().
 
-delete(Pid) ->
+remove(Pid) ->
 	ok = mnesia:activity(transaction, fun() ->
 		mnesia:delete(orc_routes, Pid, write)
 	end),
