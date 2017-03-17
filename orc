@@ -44,7 +44,7 @@ orc [node] init [ nodes .. ]
 process(Server,["init"|Cluster]) ->
 	net_kernel:start([ list_to_atom("cmd" ++ integer_to_list(erlang:system_time()) ++ "@localhost"), shortnames ]),
 	set_cookie(),
-	Nodes = [ list_to_atom(X) || X <- Cluster ],
+	Nodes = [ Server | lists:delete(Server,[ list_to_atom(X) || X <- Cluster ])],
 	process_flag(trap_exit,true),
 	io:format("Connecting to ~p~n", [ Nodes ]),
 	[ net_kernel:connect(Node) || Node <- Nodes ],
@@ -75,6 +75,14 @@ process(Server, [ "setup", File ]) ->
 		{ User, Email, Pass, Paths } <- Users ],
 	rpc:call(Server,mnesia,sync_log,[]),
 	io:format("done~n");
+
+
+process(Server, [ "join" | Cluster ]) ->
+	Nodes = [ list_to_atom(X) || X <- Cluster ],
+	ok = connect(Server),
+	rpc:multicall(Nodes,orc_cluster,add,[ Server ]),
+	green(ok),
+	eol();
 
 %% status
 process(_Server,["status","help"]) ->
@@ -147,7 +155,7 @@ process(Server,["start"]) ->
 	process(Server,[ "start", "4433", [ Server ] ]);
 
 process(Server,["start",Port|Cluster]) ->
-	Nodes = [ list_to_atom(X) || X <- Cluster ],
+	Nodes = [ Server | lists:delete(Server,[ list_to_atom(X) || X <- Cluster ])],
 	ok = connect(Server),
 	rpc:call(Server,application,set_env,[orc,port,list_to_integer(Port)]),
 	rpc:call(Server,application,set_env,[orc,cluster, Nodes]),
@@ -225,7 +233,7 @@ process(Server,["user","list"]) ->
 %% to reflect the new usage.
 process(_Server,_) ->
 	io:format("
-usage: orc [cluster|node] [start|stop|status|console|observer|init|user]
+usage: orc [node] [start|stop|status|console|observer|init|user]
 
 	help 				- this message
 
@@ -236,6 +244,10 @@ usage: orc [cluster|node] [start|stop|status|console|observer|init|user]
 	stop 				- stop a node
 
 	status 				- return the status of a node
+	
+	join [ nodes ]			- joins a cluster 
+	
+	leave [ nodes ]			- leaves a cluster
 
 	console 			- connects a console to a node
 
