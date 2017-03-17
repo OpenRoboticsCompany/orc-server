@@ -63,7 +63,7 @@ handle_cast({ route, Data }, State = #orc_router{ paths = Paths }) ->
 
 handle_cast({ close, Pid }, State = #orc_router{ paths = Paths } ) ->
 	error_logger:info_msg("Removing ~p ~n", [ Pid ]),
-	{ noreply, State#orc_router{ paths = proplist:delete(Pid,Paths) }};
+	{ noreply, State#orc_router{ paths = proplists:delete(Pid,Paths) }};
 
 handle_cast(Message,State) ->
 	error_logger:error_msg("Unknown message ~p", [ Message ]),
