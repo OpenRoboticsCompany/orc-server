@@ -17,17 +17,7 @@ a minimal amount of configuration.
 Getting Started
 ---------------
 
-In order to run the server you will need to configure a ~/.orc file:
-
-	{ host, orc@localhost }.
-	{ port, 4433 }.
-	{ cluster, [ orc@localhost ]}.
-
-This will contain the name of the default node you're going to start, 
-the port designation for that node, and a list of any other nodes
-in your cluster.
-
-Then in the priv directory of the repo you will need to install:
+In the priv directory of the repo you will need to install:
 
 	cacert.pem	-- the cert for you CA
 	cert.pem	-- the signed cert for your server
@@ -38,12 +28,25 @@ as we recommend using your own self-signed certs managed by your own
 CA.  (We will be releasing code for running an ORC style CA of your 
 own in another project).
 
-Finally, you can run the server by typing:
+Once you have the code installed on each of your nodes,
+start your nodes on your lan:
+	
+	orc node1@localhost node &
+	orc node2@localhost node &
 
-	orc start
+You can then initialize the database:
 
-The orc program has a number of commandline options that you can
-retrieve with:
+	orc node1@localhost init node1@localhost node2@localhost
+
+Then start the servers of your cluster;
+
+	orc node1@localhost start 4433 node1@localhost node2@localhost
+	orc node2@localhost start 4434 node1@localhost node2@localhost
+
+This will start a two server cluster running on port 4433 4434
+
+
+You can get more help with:
 
 	orc help
 

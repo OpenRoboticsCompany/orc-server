@@ -34,16 +34,10 @@ process(Server,["node"]) ->
 %% init
 process(_Server,["init","help"]) ->
 	io:format("
-orc [node] init
+orc [node] init [ nodes .. ]
 
 	This command initializes an Mnesia database on the given node.
-	The database is used to store routes, users, file references,
-	permissions, and REST interface objects.	
-
-	The init command will read from your ~~/.orc file to discover
-	{ cluster, [ nodes .. ] } config entry and initalize mnesia on
-	all of the nodes.  Epmd must be running on all hosts prior to
-	running the init command for it to work.
+	The database is used to store users credentials and permissions.
 
 ");
 
@@ -64,16 +58,18 @@ process(_Server, [ "setup","help" ]) ->
 	io:format("
 orc setup file
 
+	This command will load a file containing a list
+	of users and their permissions. The format of
+	this file is:
+
+	{ users, [ { name, email, pass, paths... }, ... ]}.
+
 ");
 
 process(Server, [ "setup", File ]) ->
 	ok = connect(Server),
 	{ ok, Config } = file:consult(File),
 	io:format("loading config ~p~n", [ Config ]),
-	Routes = proplists:get_value(routes, Config),
-	[ rpc:call(Server, orc_router,add,[ Path, Module ]) ||  { Path, Module } <- Routes ],
-	Files = proplists:get_value(files, Config),
-	[ rpc:call(Server,orc_file,add,[ Path, Local, Mime ])  || { Path, Local, Mime } <- Files ],
 	Users = proplists:get_value(users, Config),
 	[ setup_user(Server, User, Email, Pass, Paths) ||
 		{ User, Email, Pass, Paths } <- Users ],
@@ -235,21 +231,19 @@ usage: orc [cluster|node] [start|stop|status|console|observer|init|user]
 
 	command help			- help for the given command
 
-	cluster command			- runs a command on all nodes in a cluster
+	start [node [ cluster .. ]]	- start a new node
 
-	start [node]			- start a new node
+	stop 				- stop a node
 
-	stop [node]			- stop a node
+	status 				- return the status of a node
 
-	status [node]			- return the status of a node
+	console 			- connects a console to a node
 
-	console [node]			- connects a console to a node
+	observer 			- run the observer on a node
 
-	observer [node]			- run the observer on a node
+	init [cluster ...] 		- initialize orc database
 
-	init [node] 			- initialize orc database
-
-	setup [node] file		- load a setup file on a node
+	setup file			- load a setup file on a node
 
 	user [node] [list|add|remove|grant|revoke]
 		list			- list all users by name
@@ -257,6 +251,7 @@ usage: orc [cluster|node] [start|stop|status|console|observer|init|user]
 		remove user email	- remove a user
 		grant user path		- grant access to a path
 		revoke user path	- remove access to a path
+		auth path user pass	- test the user authentication
 
 ").
 
