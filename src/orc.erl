@@ -103,20 +103,7 @@ handle_request(Request = #request{headers = Headers, socket = Socket }) ->
 			Bin = orc_http:response(Response),
 			ssl:send(Socket,Bin);
 		_ ->
-			Host = proplists:get_value(<<"Host">>, Headers),
-			Path = binary:list_to_bin(Request#request.path),
-			Body =  <<"<script>ws = new WebSocket('wss://", Host/binary, Path/binary,
-					"','json'); ws.onmessage = function(msg) {"
-					" console.log(JSON.parse(msg.data)) };</script>">>,
-			ContentLength = binary:list_to_bin(integer_to_list(byte_size(Body))),
-			Response = #response{ 
-				socket = Request#request.socket,
-				upgrade = false,
-				status = 200,
-				protocol = <<"HTTP/1.1">>,
-				headers = [{ <<"Content-Length">>, ContentLength }],
-				body = Body
-			},
+			Response = orc_static:get(Request),
 			Bin = orc_http:response(Response),
 			ssl:send(Socket,Bin),
 			ssl:close(Socket)

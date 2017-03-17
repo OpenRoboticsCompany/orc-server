@@ -133,7 +133,7 @@ handle_info(Message, WebSocket = #websocket{ socket = Socket}) ->
 	{ noreply, WebSocket }.
 
 terminate( normal, #websocket{ socket = Socket }) ->
-	orc_router:close(self()),
+	orc_router:remove(self()),
 	ssl:close(Socket),
 	ok;
 

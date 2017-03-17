@@ -15,13 +15,12 @@
 		orc_app,
 		orc_sup,
 		orc_router,
-		orc_routes,
 		orc_logger,
 		orc_server
 	]},
 	{mod, { orc_app, []}},
 	{env, [
-		{ tables, [ orc_routes, orc_auth ]},
+		{ tables, [ orc_auth ]},
 		{ table_timeout, 20000 },
 		{ salt, <<"thisisareallyterriblesaltdon'tuse">> },
 		{ cacertfile, "cacert.pem" },

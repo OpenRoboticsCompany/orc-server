@@ -9,6 +9,7 @@
 %% to avoid colliding with other command processes
 connect(Server) ->
 	net_kernel:start([ list_to_atom("cmd" ++ integer_to_list(erlang:system_time()) ++ "@localhost"), shortnames ]),
+	set_cookie(),
 	case net_kernel:connect(Server) of
 		false -> 
 			io:format("Failed to connect to ~p~n", [ Server ]),
@@ -16,22 +17,19 @@ connect(Server) ->
 		true -> ok
 	end.
 
+process(Server,["node"]) ->
+	process_flag(trap_exit,true),
+	{ ok, _Pid } = net_kernel:start([ Server, shortnames ]),
+	set_cookie(),
+	receive
+		'EXIT' -> 
+			io:format("done~n"),
+			erlang:halt(0)
+	end;
+
 
 %% process takes the command line arugments and performs
 %% the associated action
-
-%% cluster
-process(_Server,["cluster","help"]) ->
-	io:format("
-orc cluster [stop|status|observer]
-
-");
-
-process(_Server,["cluster" | Command ]) ->
-	Home = os:getenv("HOME"),
-	Config = load_config(Home),
-	Cluster = proplists:get_value(cluster,Config),
-	[ process(Node,Command) || Node <- Cluster ];
 
 %% init
 process(_Server,["init","help"]) ->
@@ -49,19 +47,15 @@ orc [node] init
 
 ");
 
-process(Server,["init"]) ->
-	io:format("starting ~p~n", [ Server ]),
-	{ok,_Pid} = net_kernel:start([ Server, shortnames ]),
-	Home = os:getenv("HOME"),
-	Config = load_config(Home),
-	Cluster = proplists:get_value(cluster,Config),
+process(Server,["init"|Cluster]) ->
+	net_kernel:start([ list_to_atom("cmd" ++ integer_to_list(erlang:system_time()) ++ "@localhost"), shortnames ]),
+	set_cookie(),
+	Nodes = [ list_to_atom(X) || X <- Cluster ],
 	process_flag(trap_exit,true),
-	Others = lists:delete(node(), Cluster),
-	io:format("Connecting to ~p~n", [ Others ]),
-	io:format("~p~n", [[ net_kernel:connect(Node) || Node <- Others ]]),
-	rpc:multicall([node()|nodes()], application,load,[orc]),
-	orc_database:initialize(Cluster),
-	io:format("~p ", [ Server ]),
+	io:format("Connecting to ~p~n", [ Nodes ]),
+	[ net_kernel:connect(Node) || Node <- Nodes ],
+	rpc:multicall(Nodes, application,load,[orc]),
+	rpc:multicall([Server], orc_database,initialize, [Nodes]),
 	green(ok),
 	eol();
 
@@ -145,7 +139,7 @@ process(Server,["console"]) ->
 %% start
 process(_Server,["start","help"]) ->
 	io:format("
-orc [node] start
+orc [node] start [port [cluster...]]
 	
 	The start command will start a orc application on the given node.
 	Epmd must be running on the host already for this command to work.
@@ -154,22 +148,15 @@ orc [node] start
 ");	
 
 process(Server,["start"]) ->
-	process_flag(trap_exit,true),
-	case net_kernel:start([ Server, shortnames ]) of
-		{ ok, Pid } ->
-			io:format("Started ~p at ~p~n", [ Server, Pid ]),
-			ok = connect(Server),
-			rpc:call(Server,mnesia,start,[]),
-			rpc:call(Server,application,load,[orc]),
-			rpc:call(Server,orc,start,[]);
-		{ error, Reason } ->
-			io:format("Failed to start ~p: ~p~n", [ Server, Reason ])	
-	end,
-	receive
-		'EXIT' -> 
-			io:format("done~n"),
-			erlang:halt(0)
-	end;
+	process(Server,[ "start", "4433", [ Server ] ]);
+
+process(Server,["start",Port|Cluster]) ->
+	Nodes = [ list_to_atom(X) || X <- Cluster ],
+	ok = connect(Server),
+	rpc:call(Server,application,set_env,[orc,port,list_to_integer(Port)]),
+	rpc:call(Server,application,set_env,[orc,cluster, Nodes]),
+	rpc:call(Server,application,load,[orc]),
+	rpc:call(Server,orc,start,[]);
 
 %% stop
 process(_Server,["stop","help"]) ->
@@ -273,59 +260,18 @@ usage: orc [cluster|node] [start|stop|status|console|observer|init|user]
 
 ").
 
-%% Loads a configuration file from our home base
-%%
-load_config(Home) ->
-	case file:consult(Home ++ "/.orc") of 
-		{ok, Config } -> 
-			Config;
+set_cookie() ->
+	case application:get_env(orc,cookie) of
+		{ ok, Cookie } ->
+			erlang:set_cookie(node(),Cookie);
 		_ ->
-			io:format("Please create a ~s/.orc configuration file~n", [ Home ]), halt(0)
-	end.
-
-set_cookie(Config) ->
-	case proplists:get_value(cookie,Config) of
-		undefined ->
-			ok;
-		Cookie ->
-			erlang:set_cookie(node(),Cookie)
+			ok
 	end.
 
 setup_user(Server,User,Email,Password,Paths) ->
 	rpc:call(Server, orc_auth, add, [ User, Email, Password ]),
 	[ rpc:call(Server, orc_auth, grant, [ User, Path ]) ||
 		Path <- Paths ].
-
-find_server([]) ->
-	none;
-find_server([Host|_Args]) ->
-	case string:tokens(Host,"@") of
-		[ _Name , _Host ] -> Host;
-		_ -> none
-	end.
-
-find_host(Config,[])->
-	Host = proplists:get_value(host,Config),
-	case Host of
-		undefined ->
-			io:format("Please set host in ~~/.botbop~n"), 
-			halt(1);
-		Host ->
-			{ Host, [] }
-	end;
-find_host(Config,[ _A | As ] = Args) ->
-	Server = find_server(Args),
-	case { Server, proplists:get_value(host,Config) } of
-		{ none, undefined } ->
-			io:format("Please set host in ~~/.orc~n"), 
-			halt(1);
-		{ Server, undefined } ->
-			{ list_to_atom(Server), As };
-		{ none, Host } ->
-			{ Host, Args };
-		{ Server, _Host } ->
-			{ list_to_atom(Server), As }
-	end.
 
 eol() ->
 	io:format("~n").
@@ -340,9 +286,13 @@ red(Term) ->
 	io:format("~p", [ Term ]),
 	io:format([ 16#1b | "[;39m" ]).
 
+find_server(Args = [ Host | Args2 ]) ->
+	case string:chr(Host,$@) of
+		0 -> { orc@localhost, Args };
+		_ -> { list_to_atom(Host), Args2 }
+	end.
+
 main(Args) ->
-	Home = os:getenv("HOME"),
-	Config = load_config(Home),
-	{ Host, Args2 } = find_host(Config,Args),
-	ok = set_cookie(Config),
+	%% always start a temporary node that we can discard
+	{ Host, Args2 } = find_server(Args),
 	process(Host,Args2).

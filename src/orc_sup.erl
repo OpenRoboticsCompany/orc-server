@@ -10,10 +10,17 @@ start_link() ->
 	supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 init([]) ->
-	{ ok, Config } = file:consult(os:getenv("HOME") ++ "/.orc"),
-	Nodes = proplists:get_value(cluster,Config),
-	Port = proplists:get_value(port,Config),
+	{ ok, Port} = application:get_env(orc,port),
+	{ ok, Nodes } = application:get_env(orc,cluster),
 	{ok, { {one_for_one, 5, 10}, [
+		#{ id => orc_cluster,
+		start => { orc_cluster, start_link, [Nodes]},
+		restart => permanent,
+		shutdown => brutal_kill,
+		type => worker,
+		modules => [
+			orc_cluster
+		]},
 		#{ id => orc_database,
 		start => { orc_database, start_link, [ Nodes ]},
 		restart => permanent,
@@ -37,14 +44,6 @@ init([]) ->
 		type => worker,
 		modules => [ 
 			orc_router
-		]},
-		#{ id => orc_cluster,
-		start => { orc_cluster, start_link, []},
-		restart => permanent,
-		shutdown => brutal_kill,
-		type => worker,
-		modules => [
-			orc_cluster
 		]},
 		#{ id => ?ORC_SERVER(Port),
 		start => { orc_server, start_link, [ Port ]},

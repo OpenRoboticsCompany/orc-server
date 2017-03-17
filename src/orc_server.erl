@@ -33,6 +33,7 @@ init(Server = #orc_server{ port = Port }) ->
 	CACert = code:priv_dir(orc) ++ "/cacert.pem",
 	Cert = code:priv_dir(orc) ++ "/cert.pem",
 	Key = code:priv_dir(orc) ++ "/key.pem",
+	error_logger:info_msg("Starting orc server on port ~p~n", [ Port ]),
 	case ssl:listen(Port,[
 		binary, 
 		{packet,0},

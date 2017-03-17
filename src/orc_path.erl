@@ -4,9 +4,6 @@
 
 -export([ match/2, scan/2, components/1, eval/2, validate/2  ]).
 
--record(orc_routes, { pid, path, time, active = true }).
-
-
 segments([K,V]) ->
 	{ K, V };
 segments([K]) ->
@@ -40,9 +37,9 @@ compare(Data, [ { K, V } | Tail]) ->
 %% searches a proplist for a path match
 %% { Pattern, Pid }
 scan(Data, Paths) ->
-	[ V || #orc_routes{ pid = V } <- lists:filter( fun(#orc_routes{path = K}) ->
-		M = match(Data,K),
-		error_logger:info_msg("Path: ~p Matches: ~p Data: ~p~n", [ K, M, Data ]),
+	[ V || { V, _ } <- lists:filter( fun({ _Pid, Path }) ->
+		M = match(Data,Path),
+		error_logger:info_msg("Path: ~p Matches: ~p Data: ~p~n", [ Path, M, Data ]),
 		M
 	 end, 
 	Paths) ].

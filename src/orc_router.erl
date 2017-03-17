@@ -43,7 +43,7 @@ route(Data) ->
 %
 
 init([]) ->
-	{ ok, #orc_router{ paths = orc_routes:load() }}.
+	{ ok, #orc_router{ paths = [] }}.
 
 handle_call(stop,_From,State) ->
 	{ stop, stopped, State };
@@ -52,20 +52,18 @@ handle_call(Message,_From,State) ->
 	error_logger:error_msg("Unknown message ~p", [ Message ]),
 	{ reply, #response{ status = 405 }, State }.
 
-handle_cast({ connect, Path, Pid }, State) ->
+handle_cast({ connect, Path, Pid }, State = #orc_router{ paths = Paths }) ->
 	error_logger:info_msg("Adding ~p for ~p~n", [ Path, Pid ]),
-	Paths = orc_routes:add(Pid,Path),
-	{ noreply, State#orc_router{ paths = Paths } };	
+	{ noreply, State#orc_router{ paths = [ { Pid, Path } | Paths ] } };	
 
 handle_cast({ route, Data }, State = #orc_router{ paths = Paths }) ->
 	error_logger:info_msg("Paths are ~p~n", [ Paths ]),
 	[ orc_websocket:send(Pid, Data) || Pid <- orc_path:scan(Data,Paths) ], 	
 	{ noreply, State };
 
-handle_cast({ close, Pid }, State ) ->
-	error_logger:info_msg("Adding ~p ~n", [ Pid ]),
-	Paths = orc_routes:remove(Pid),
-	{ noreply, State#orc_router{ paths = Paths }};
+handle_cast({ close, Pid }, State = #orc_router{ paths = Paths } ) ->
+	error_logger:info_msg("Removing ~p ~n", [ Pid ]),
+	{ noreply, State#orc_router{ paths = proplist:delete(Pid,Paths) }};
 
 handle_cast(Message,State) ->
 	error_logger:error_msg("Unknown message ~p", [ Message ]),
