@@ -36,7 +36,7 @@ route(<<>>) ->
 	ok;
 route(Data) ->
 	error_logger:info_msg("Routing ~p~n", Data ),
-	gen_server:cast(?MODULE, { route, Data }).
+	gen_server:abcast(orc_cluster:nodes(), ?MODULE, { route, Data }).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Private API

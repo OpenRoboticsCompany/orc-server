@@ -74,9 +74,7 @@ handle_info({ ssl, Socket, Data }, Orc = #orc{ request = Req }) ->
 	Request = orc_http:request(Req,Data),
 	case Request#request.stage of
 		done ->
-			Response = orc_websocket:get(Request),
-			Bin = orc_http:response(Response),
-			ssl:send(Socket,Bin),
+			handle_request(Request),
 			{ noreply, Orc#orc{ request = #request{ socket = Socket } }};
 		_ ->
 			{ noreply, Orc#orc{ request = Request }}
@@ -96,3 +94,31 @@ terminate(_Reason,#orc{ socket = Socket }) ->
 
 code_change( _Old, Orc, _Extra) ->
 	{ ok, Orc }.
+
+
+handle_request(Request = #request{headers = Headers, socket = Socket }) ->
+	case proplists:get_value(<<"Upgrade">>, Headers) of
+		<<"websocket">> ->
+			Response = orc_websocket:get(Request),
+			Bin = orc_http:response(Response),
+			ssl:send(Socket,Bin);
+		_ ->
+			Host = proplists:get_value(<<"Host">>, Headers),
+			Path = binary:list_to_bin(Request#request.path),
+			Body =  <<"<script>ws = new WebSocket('wss://", Host/binary, Path/binary,
+					"','json'); ws.onmessage = function(msg) {"
+					" console.log(JSON.parse(msg.data)) };</script>">>,
+			ContentLength = binary:list_to_bin(integer_to_list(byte_size(Body))),
+			Response = #response{ 
+				socket = Request#request.socket,
+				upgrade = false,
+				status = 200,
+				protocol = <<"HTTP/1.1">>,
+				headers = [{ <<"Content-Length">>, ContentLength }],
+				body = Body
+			},
+			Bin = orc_http:response(Response),
+			ssl:send(Socket,Bin),
+			ssl:close(Socket)
+	end.
+
