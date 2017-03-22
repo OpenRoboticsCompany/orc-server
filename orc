@@ -84,6 +84,13 @@ process(Server, [ "join" | Cluster ]) ->
 	green(ok),
 	eol();
 
+process(Server, [ "leave" | Cluster ]) ->
+	Nodes = [ list_to_atom(X) || X <- Cluster ],
+	ok = connect(Server),
+	rpc:multicall(Nodes,orc_cluster,remove,[ Server ]),
+	green(ok),
+	eol();
+
 %% status
 process(_Server,["status","help"]) ->
 	io:format("
@@ -152,7 +159,7 @@ orc [node] start [port [cluster...]]
 ");	
 
 process(Server,["start"]) ->
-	process(Server,[ "start", "4433", [ Server ] ]);
+	process(Server,[ "start", "4433" ]);
 
 process(Server,["start",Port|Cluster]) ->
 	Nodes = [ Server | lists:delete(Server,[ list_to_atom(X) || X <- Cluster ])],
@@ -293,6 +300,8 @@ red(Term) ->
 	io:format("~p", [ Term ]),
 	io:format([ 16#1b | "[;39m" ]).
 
+find_server([]) -> 
+	{ orc@localhost, []};
 find_server(Args = [ Host | Args2 ]) ->
 	case string:chr(Host,$@) of
 		0 -> { orc@localhost, Args };
