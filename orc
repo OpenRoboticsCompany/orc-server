@@ -240,13 +240,19 @@ process(Server,["user","list"]) ->
 %% to reflect the new usage.
 process(_Server,_) ->
 	io:format("
-usage: orc [node] [start|stop|status|console|observer|init|user]
+usage: orc [node] [node|init|setup|start|stop|status|console|observer|user]
 
 	help 				- this message
 
 	command help			- help for the given command
 
-	start [node [ cluster .. ]]	- start a new node
+	node 				- create a node
+
+	init [cluster ...] 		- initialize orc database
+
+	setup file			- load a setup file on a node
+
+	start [ port [ cluster .. ]]	- start the server on a node
 
 	stop 				- stop a node
 
@@ -259,10 +265,6 @@ usage: orc [node] [start|stop|status|console|observer|init|user]
 	console 			- connects a console to a node
 
 	observer 			- run the observer on a node
-
-	init [cluster ...] 		- initialize orc database
-
-	setup file			- load a setup file on a node
 
 	user [node] [list|add|remove|grant|revoke]
 		list			- list all users by name
