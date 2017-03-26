@@ -18,13 +18,12 @@ stop() ->
 	gen_server:call(?MODULE,stop).
 
 
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Private API
 
 init( Admin = #orc_admin{} ) ->
+	orc_router:connect(self(),"/Admin"),
 	{ ok, Admin }.
-
 
 handle_call(stop,_From,State) ->
 	{ stop, stopped, State };
@@ -32,6 +31,11 @@ handle_call(stop,_From,State) ->
 handle_call(Message,_From,State) ->
 	error_logger:error_msg("Unknown message ~p~n", [ Message ]),
 	{ reply, ok, State }.
+
+handle_cast({ send, Message },State) ->
+	error_logger:info_msg("~p~n", [ Message ]),
+	admin(Message),
+	{ noreply, State };
 
 handle_cast(Message,State) ->
 	error_logger:error_msg("Unknown message ~p~n", [ Message ]),
@@ -47,3 +51,35 @@ terminate(Reason,_State) ->
 
 code_change(_Old,State,_Extra) ->
 	{ ok, State }.
+
+admin(Message) ->
+	case proplists:get_value(<<"Admin">>,Message) of
+		<<"User">> -> admin_user(Message);
+		_ -> ok
+	end.
+
+admin_user(Message) ->
+	case proplists:get_value(<<"action">>,Message) of
+		<<"add">> ->
+			Name = proplists:get_value(<<"name">>,Message),
+			Email = proplists:get_value(<<"email">>,Message),
+			Password = proplists:get_value(<<"password">>,Message),
+			case Password of
+				<<"">> -> error_logger:info_msg("refusing to set empty password");
+				<<"undefined">> -> error_logger:info_msg("refusing to set undefined password");
+				_ -> orc_auth:add(Name,Email,Password)
+			end;
+		<<"remove">> ->
+			Name = proplists:get_value(<<"name">>,Message),
+			Email = proplists:get_value(<<"email">>,Message),
+			orc_auth:remove(Name,Email);
+		<<"list">> ->
+			Users = orc_auth:users(),
+			[ orc_router:route([
+				{<<"Admin">>,<<"User">>},
+				{<<"name">>, Name},
+				{<<"email">>, Email}
+			]) || { Name, Email } <- Users ];
+		_ ->
+			ok
+	end.

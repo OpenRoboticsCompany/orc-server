@@ -26,22 +26,15 @@ function addUser() {
 		email: email.value, 
 		password: password.value,
 	}),document.location.origin);
-	name.value = "";
-	email.value = "";
-	password.value = "";
 }
 function removeUser() {
 	var name = document.getElementById('name')
-	var email = document.getElementById('email')
-	var password = document.getElementById('password')
 	window.parent.postMessage(JSON.stringify({ 
 		Admin: "User", 
 		action: "remove",
 		name: name.value, 
+		email: email.value
 	}),document.location.origin);
-	name.value = "";
-	email.value = "";
-	password.value = "";
 }
 
 window.onmessage = function(msg) {
@@ -52,7 +45,7 @@ window.onmessage = function(msg) {
 	var password = document.getElementById('password')
 	name.value = user.name
 	email.value = user.email
-	password.value = user.password
+	password.value = ''
 }
 </script>
 <div class="User">
@@ -61,8 +54,8 @@ window.onmessage = function(msg) {
 <div class="field"><label for="name">Name</label><input id="name" type="text" value=""></div>
 <div class="field"><label for="email">Email</label><input id="email" type="text" value=""></div>
 <div class="field"><label for="password">Password</label><input id="password" type="password" value=""></div>
-<div class="field"><input id="button" type="submit" onclick="addUser()" value="Add User"></div>
-<div class="field"><input id="button" type="submit" onclick="removeUser()" value="Remove User"></div>
+<div class="field"><input id="button" type="button" onclick="addUser()" value="Add User"></div>
+<div class="field"><input id="button" type="button" onclick="removeUser()" value="Remove User"></div>
 </form>
 </div>
 
