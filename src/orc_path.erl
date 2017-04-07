@@ -55,7 +55,7 @@ validate([],[]) ->
 	error_logger:info_msg("validate true~n"),
 	true;
 validate([{KA,VA}|TA],[{KB,VB}|TB]) ->
-	error_logger:info_msg("A ~p vs B ~p~n", [ KA, KB ]),
+	error_logger:info_msg("A ~p vs B ~p~n (~p / ~p )", [ KA, KB, TA,TB]),
 	case (KB =:= "*") 
 		or ((KA =:= KB) 
 			and ((VA =:= VB) 
@@ -64,6 +64,8 @@ validate([{KA,VA}|TA],[{KB,VB}|TB]) ->
 		false -> false
 	end;
 validate([],[{"*","*"}|_TB]) ->
+	true;
+validate(_,[]) ->
 	true;
 validate(_,_) ->
 	error_logger:info_msg("validate false~n"),

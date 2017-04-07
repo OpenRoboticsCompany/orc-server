@@ -1,7 +1,7 @@
 -module(orc_static).
 -author({ "David J Goehrig", "dave@dloh.org" }).
--copyright(<<"© 2012,2013 David J. Goehrig"/utf8>>).
--export([ get/1, static_file/1, default_file/1 ]).
+-copyright(<<"© 2017 David J. Goehrig"/utf8>>).
+-export([ get/1, static_file/1, default_file/1, file/1 ]).
 
 -include("include/orc_http.hrl").
 
@@ -23,12 +23,17 @@ default_file(#request{ path = Path, headers = Headers }) ->
 		"','json'); ws.onmessage = function(msg) {"
 		" console.log(JSON.parse(msg.data)) };</script>">>.
 
+file(Path) ->
+	Filename = code:priv_dir(orc) ++ "/html" ++ Path,
+	error_logger:info_msg("Looking for file ~p~n",[ Filename ]),
+	file:read_file(Filename).
+
 static_file(Request = #request{ path = Path }) ->
-	Filename = code:priv_dir(orc) ++ "/html/" ++ Path,
-	Content = case file:read_file(Filename) of
+	Content = case file(Path) of
 		{ ok, Bin } ->
 			Bin;
-		{ error, _ } ->
+		{ error, Error } ->
+			erro_logger:error_msg("Returning default ~p~n", [ Error ]),
 			default_file(Request)
 	end,
 	ContentLength = binary:list_to_bin(integer_to_list(byte_size(Content))),

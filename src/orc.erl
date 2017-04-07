@@ -103,7 +103,7 @@ handle_request(Request = #request{headers = Headers, socket = Socket }) ->
 			Bin = orc_http:response(Response),
 			ssl:send(Socket,Bin);
 		_ ->
-			Response = orc_static:get(Request),
+			Response = orc_dynamic:get(Request),
 			Bin = orc_http:response(Response),
 			ssl:send(Socket,Bin),
 			ssl:close(Socket)
