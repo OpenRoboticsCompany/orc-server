@@ -44,7 +44,8 @@ mount(Path,Module) ->
 %% Private Interface
 
 init([]) ->
-	ModuleDir = code:priv_dir(orc) ++ "/modules/",
+	Directory = orc_path:priv(),
+	ModuleDir = Directory ++ "/modules/",
 	{ ok, Dir } = file:list_dir(ModuleDir),
 	Files = lists:usort(lists:map ( fun (F) -> lists:nth(1,string:tokens(F,".")) end, Dir)),
 	Modules = [ code:load_abs(ModuleDir ++ File) || File <- Files ],

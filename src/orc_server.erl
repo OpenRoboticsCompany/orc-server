@@ -30,13 +30,7 @@ accept(Port) ->
 %
 
 init(Server = #orc_server{ port = Port }) ->
-	Directory = case code:priv_dir(orc) of
-		{ error,bad_name } ->
-			{ ok, Dir} = application:get_env(orc,path),
-			Dir;
-		Dir ->
-			Dir
-	end,
+	Directory = orc_path:priv(),
 	CACert = Directory ++ "/cacert.pem",
 	Cert = Directory ++ "/cert.pem",
 	Key = Directory ++ "/key.pem",

@@ -2,7 +2,17 @@
 -author({ "David J Goehrig", "dave@dloh.org" }).
 -copyright(<<"© 2016,2017 David J Goehrig, Open Robotics Company LLC."/utf8>>).
 
--export([ match/2, scan/2, components/1, eval/2, validate/2  ]).
+-export([ match/2, scan/2, components/1, eval/2, validate/2, priv/0  ]).
+
+
+priv() ->
+	case code:priv_dir(orc) of
+		{ error,bad_name } ->
+			{ ok, Dir} = application:get_env(orc,path),
+			Dir;
+		Dir ->
+			Dir
+	end.
 
 segments([K,V]) ->
 	{ K, V };
@@ -87,3 +97,4 @@ match_test() ->
 	?assertEqual(true, orc_path:match( [ {"foo","bar"},{"narf","blat"}], "/foo=bar/*/narf=borf")).
 
 -endif.
+

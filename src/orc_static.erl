@@ -16,7 +16,8 @@ default_file(#request{ path = Path, headers = Headers }) ->
 		" console.log(JSON.parse(msg.data)) };</script>">>.
 
 file(Path) ->
-	Filename = code:priv_dir(orc) ++ "/html" ++ Path,
+	
+	Filename = orc_path:priv() ++ "/html" ++ Path,
 	error_logger:info_msg("Looking for file ~p~n",[ Filename ]),
 	file:read_file(Filename).
 
