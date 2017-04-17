@@ -113,7 +113,7 @@ users() ->
 	F = fun() ->
 		case mnesia:match_object(#orc_auth{ user = '_', email = '_', token = '_', active = true, paths = '_' }) of
 			Users when is_list(Users) ->
-				[ User || #orc_auth{ user = User } <- Users ];
+				[ {User,Email} || #orc_auth{ user = User, email = Email } <- Users ];
 			_ -> []	
 		end
 	end,

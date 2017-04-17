@@ -45,6 +45,23 @@ init([]) ->
 		modules => [ 
 			orc_router
 		]},
+		#{ id => orc_dynamic,
+		start => { orc_dynamic, start_link, []},
+		restart => permanent,
+		shutdown => brutal_kill,
+		type => worker,
+		modules => [
+			orc_dynamic,
+			orc_static
+		]},
+		#{ id => orc_admin,
+		start => { orc_admin, start_link, []},
+		restart => permanent,
+		shutdown => brutal_kill,
+		type => worker,
+		modules => [
+			orc_admin
+		]},
 		#{ id => ?ORC_SERVER(Port),
 		start => { orc_server, start_link, [ Port ]},
 		restart => permanent,

@@ -14,8 +14,11 @@
 		orc,
 		orc_app,
 		orc_sup,
+		orc_auth,
 		orc_router,
 		orc_logger,
+		orc_static,
+		orc_dynamic,
 		orc_server
 	]},
 	{mod, { orc_app, []}},
