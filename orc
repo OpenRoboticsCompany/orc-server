@@ -166,6 +166,7 @@ process(Server,["start",Port|Cluster]) ->
 	ok = connect(Server),
 	rpc:call(Server,application,set_env,[orc,port,list_to_integer(Port)]),
 	rpc:call(Server,application,set_env,[orc,cluster, Nodes]),
+	rpc:call(Server,application,set_env,[orc,path, "./priv" ]),
 	rpc:call(Server,application,load,[orc]),
 	rpc:call(Server,orc,start,[]);
 
@@ -312,5 +313,9 @@ find_server(Args = [ Host | Args2 ]) ->
 
 main(Args) ->
 	%% always start a temporary node that we can discard
+	Script = escript:script_name(),
+	io:format("running ~p~n", [ Script] ),
+	io:format("Directory ~p~n", [ filename:dirname(Script) ]),
+	true = code:add_pathz(filename:dirname(escript:script_name()) ++ "/ebin"),
 	{ Host, Args2 } = find_server(Args),
 	process(Host,Args2).

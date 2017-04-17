@@ -30,9 +30,16 @@ accept(Port) ->
 %
 
 init(Server = #orc_server{ port = Port }) ->
-	CACert = code:priv_dir(orc) ++ "/cacert.pem",
-	Cert = code:priv_dir(orc) ++ "/cert.pem",
-	Key = code:priv_dir(orc) ++ "/key.pem",
+	Directory = case code:priv_dir(orc) of
+		{ error,bad_name } ->
+			{ ok, Dir} = application:get_env(orc,path),
+			Dir;
+		Dir ->
+			Dir
+	end,
+	CACert = Directory ++ "/cacert.pem",
+	Cert = Directory ++ "/cert.pem",
+	Key = Directory ++ "/key.pem",
 	error_logger:info_msg("Starting orc server on port ~p~n", [ Port ]),
 	case ssl:listen(Port,[
 		binary, 

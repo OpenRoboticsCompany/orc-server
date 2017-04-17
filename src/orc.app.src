@@ -20,6 +20,8 @@
 	]},
 	{mod, { orc_app, []}},
 	{env, [
+		{ port, 4433 },
+		{ cluster, [ orc@localhost ]},
 		{ tables, [ orc_auth ]},
 		{ table_timeout, 20000 },
 		{ salt, <<"thisisareallyterriblesaltdon'tuse">> },
