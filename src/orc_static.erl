@@ -26,6 +26,6 @@ static_file(Request = #request{ path = Path }) ->
 		{ ok, Bin } ->
 			Bin;
 		{ error, Error } ->
-			erro_logger:error_msg("Returning default ~p~n", [ Error ]),
+			error_logger:error_msg("Returning default ~p~n", [ Error ]),
 			default_file(Request)
 	end.
