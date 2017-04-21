@@ -30,17 +30,41 @@ match(Data,Path) ->
 	compare(Data,Pattern).
 
 %% content sensitive matching
-compare(_Data,[]) -> true;	
-compare(_Data,[{}]) -> true;
-compare(_Data,[ { "*", "*"} | _Tail ]) -> true;
+compare(_Data,[]) -> 
+	true;	
+compare(_Data,[{}]) -> 
+	true;
+compare(_Data,[ { "*", "*"} | _Tail ]) -> 
+	true;
 compare(Data, [ { K, "*" } | Tail ]) ->
 	case lists:member(binary:list_to_bin(K),proplists:get_keys(Data)) of
-		true ->	compare(Data, Tail );
-		_ -> false
+		true ->	
+			compare(Data, Tail );
+		_ -> 
+			false
 	end;
 compare(Data, [ { K, V } | Tail]) ->
-	case lists:member({binary:list_to_bin(K),binary:list_to_bin(V)},Data) of
-		true -> compare(Data,Tail);
+	case integer_key(K) of
+		false ->
+			case lists:member({binary:list_to_bin(K),binary:list_to_bin(V)},Data) of
+				true -> compare(Data,Tail);
+				_ -> false
+			end;
+		N ->
+			case N < length(Data) of
+				true ->
+					case lists:nth(N+1,Data) =:= binary:list_to_bin(V) of
+						true -> compare(Data,Tail);
+						_ -> false
+					end;
+				_ ->
+					false
+			end
+	end.
+
+integer_key(K) ->
+	case string:to_integer(K) of
+		{ N, []} -> N;
 		_ -> false
 	end.
 	
@@ -84,17 +108,19 @@ validate(_,_) ->
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 match_test() ->
-	?assertEqual(true, orc_path:match( [ {"foo","bar"},{"narf","blat"}], "/")),
-	?assertEqual(true, orc_path:match( [ {"foo","bar"},{"narf","blat"}], "/*")),
-	?assertEqual(true, orc_path:match( [ {"foo","bar"},{"narf","blat"}], "/foo/*")),
-	?assertEqual(true, orc_path:match( [ {"foo","bar"},{"narf","blat"}], "/foo/narf")),
-	?assertEqual(false, orc_path:match( [ {"foo","bar"},{"narf","blat"}], "/foo/narf/blat")),
-	?assertEqual(true, orc_path:match( [ {"foo","bar"},{"narf","blat"}], "/foo/narf=blat")),
-	?assertEqual(false, orc_path:match( [ {"foo","bar"},{"narf","blat"}], "/foo=blat/narf=blat")),
-	?assertEqual(true, orc_path:match( [ {"foo","bar"},{"narf","blat"}], "/foo=bar/narf=")),
-	?assertEqual(true, orc_path:match( [ {"foo","bar"},{"narf","blat"}], "/foo=bar/narf=*")),
-	?assertEqual(true, orc_path:match( [ {"foo","bar"},{"narf","blat"}], "/foo=bar/narf")),
-	?assertEqual(true, orc_path:match( [ {"foo","bar"},{"narf","blat"}], "/foo=bar/*/narf=borf")).
-
+	?assertEqual(true, orc_path:match( [ <<"foo">>, <<"bar">>, <<"narf">>, <<"blat">> ], "/0=foo" )),
+	?assertEqual(false, orc_path:match( [ <<"foo">>, <<"bar">>, <<"narf">>, <<"blat">> ], "/5=foo" )),
+	?assertEqual(true, orc_path:match( [ <<"foo">>, <<"bar">>, <<"narf">>, <<"blat">> ], "/1=bar/3=blat" )),
+	?assertEqual(true, orc_path:match( [ {<<"foo">>,<<"bar">>},{<<"narf">>,<<"blat">>}], "/")),
+	?assertEqual(true, orc_path:match( [ {<<"foo">>,<<"bar">>},{<<"narf">>,<<"blat">>}], "/*")),
+	?assertEqual(true, orc_path:match( [ {<<"foo">>,<<"bar">>},{<<"narf">>,<<"blat">>}], "/foo/*")),
+	?assertEqual(true, orc_path:match( [ {<<"foo">>,<<"bar">>},{<<"narf">>,<<"blat">>}], "/foo/narf")),
+	?assertEqual(false, orc_path:match( [ {<<"foo">>,<<"bar">>},{<<"narf">>,<<"blat">>}], "/foo/narf/blat")),
+	?assertEqual(true, orc_path:match( [ {<<"foo">>,<<"bar">>},{<<"narf">>,<<"blat">>}], "/foo/narf=blat")),
+	?assertEqual(false, orc_path:match( [ {<<"foo">>,<<"bar">>},{<<"narf">>,<<"blat">>}], "/foo=blat/narf=blat")),
+	?assertEqual(true, orc_path:match( [ {<<"foo">>,<<"bar">>},{<<"narf">>,<<"blat">>}], "/foo=bar/narf=")),
+	?assertEqual(true, orc_path:match( [ {<<"foo">>,<<"bar">>},{<<"narf">>,<<"blat">>}], "/foo=bar/narf=*")),
+	?assertEqual(true, orc_path:match( [ {<<"foo">>,<<"bar">>},{<<"narf">>,<<"blat">>}], "/foo=bar/narf")),
+	?assertEqual(true, orc_path:match( [ {<<"foo">>,<<"bar">>},{<<"narf">>,<<"blat">>}], "/foo=bar/*/narf=borf")).
 -endif.
 
