@@ -36,14 +36,14 @@ compare(_Data,[{}]) ->
 	true;
 compare(_Data,[ { "*", "*"} | _Tail ]) -> 
 	true;
-compare(Data, [ { K, "*" } | Tail ]) ->
+compare(Data, [ { K, "*" } | Tail ]) when is_list(Data) ->
 	case lists:member(binary:list_to_bin(K),proplists:get_keys(Data)) of
 		true ->	
 			compare(Data, Tail );
 		_ -> 
 			false
 	end;
-compare(Data, [ { K, V } | Tail]) ->
+compare(Data, [ { K, V } | Tail]) when is_list(Data) ->
 	case integer_key(K) of
 		false ->
 			case lists:member({binary:list_to_bin(K),binary:list_to_bin(V)},Data) of
@@ -60,7 +60,10 @@ compare(Data, [ { K, V } | Tail]) ->
 				_ ->
 					false
 			end
-	end.
+	end;
+
+compare(_Data, [ { _K, _V } | _Tail ]) ->
+	false.
 
 integer_key(K) ->
 	case string:to_integer(K) of

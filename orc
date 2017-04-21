@@ -111,6 +111,17 @@ process(Server,["status"]) ->
 	end,
 	eol();
 
+%% modules
+process(Server,["modules", "list"] ) ->
+	ok = connect(Server),
+	List = rpc:call(Server,orc_dynamic,list,[]),
+	io:format("~p modules: ~p~n", [ Server, List ]);
+
+process(Server,["modules", "reload"]) ->
+	ok = connect(Server),
+	rpc:cast(Server,orc_dynamic,reload,[]),
+	green(ok);	
+
 %% observer
 process(_Server,["observer","help"]) ->
 	io:format("
@@ -258,6 +269,10 @@ usage: orc [node] [node|init|setup|start|stop|status|console|observer|user]
 	stop 				- stop a node
 
 	status 				- return the status of a node
+
+	modules [ list | reload ]
+		  list			- list all modules loaded
+		  reload		- reload all dynamic modules
 	
 	join [ nodes ]			- joins a cluster 
 	

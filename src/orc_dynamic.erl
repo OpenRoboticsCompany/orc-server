@@ -1,7 +1,7 @@
 -module(orc_dynamic).
 -author({ "David J Goehrig", "dave@dloh.org" }).
 -copyright(<<"© 2017 David J. Goehrig"/utf8>>).
--export([ get/1, start_link/0, mount/2 ]).
+-export([ get/1, start_link/0, mount/2, reload/0, list/0 ]).
 -export([ init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3 ]).
 
 -behavior(gen_server).
@@ -40,17 +40,17 @@ get(Request = #request { path = Path }) ->
 mount(Path,Module) ->
 	gen_server:cast(?MODULE,{ mount, Path, Module }).
 
+reload() ->
+	gen_server:cast(?MODULE, reload ).
+
+list() ->
+	gen_server:call(?MODULE, list ).
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Private Interface
 
 init([]) ->
-	Directory = orc_path:priv(),
-	ModuleDir = Directory ++ "/modules/",
-	{ ok, Dir } = file:list_dir(ModuleDir),
-	Files = lists:usort(lists:map ( fun (F) -> lists:nth(1,string:tokens(F,".")) end, Dir)),
-	Modules = [ code:load_abs(ModuleDir ++ File) || File <- Files ],
-	error_logger:info_msg("Loaded ~p~n", [ Modules ]),
-	[ Module:init() || { module, Module } <- Modules ],
+	reload(),
 	{ ok, #orc_dynamic{ routes = [] }}.
 
 handle_call({ get, Request = #request{ path = Path }}, _From, State = #orc_dynamic{ routes = Routes }) ->
@@ -61,9 +61,24 @@ handle_call({ get, Request = #request{ path = Path }}, _From, State = #orc_dynam
 			{ reply, Module:get(Request), State }
 	end;	
 
+handle_call(list, _From, State = #orc_dynamic{ routes = Routes }) ->
+	{ reply, Routes, State };
+
 handle_call(Message,_From,State) ->
 	error_logger:error_msg("Unknown message ~p~n", 	[ Message ]),
 	{ reply, ok, State }.
+
+handle_cast(reload, State) ->
+	Directory = orc_path:priv(),
+	ModuleDir = Directory ++ "/modules/",
+	{ ok, Dir } = file:list_dir(ModuleDir),
+	Files = lists:usort(lists:map ( fun (F) -> lists:nth(1,string:tokens(F,".")) end, Dir)),
+	Modules = [ code:load_abs(ModuleDir ++ File) || File <- Files ],
+	error_logger:info_msg("Loaded ~p~n", [ Modules ]),
+	[ code:purge(Module) || { module, Module } <- Modules ],
+	Routes = [ Module:init() || { module, Module } <- Modules ],
+	error_logger:info_msg("Modules: ~p~n", [ Routes ]),
+	{ noreply, State#orc_dynamic{ routes = Routes }};
 
 handle_cast({ mount, Path, Module }, State = #orc_dynamic{ routes = Routes }) ->
 	error_logger:info_msg("Routing ~p -> ~p~n", [ Path, Module ]),	
